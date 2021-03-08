@@ -275,52 +275,28 @@ def gold_medal_map(continent="world"):
     return fig
 
 
-def predict_results(event):
+def predict_results(event, medal):
     """
-    Takes an event as a string parameter and uses a decision tree regressor
+    Takes an event and medal type as a string parameter and uses a decision tree regressor
     to predict the top 3 results given medal and nationality of a competitor
     """
-
-    filtered = df_converted[df_converted['Event'] == event]
-    filtered = filtered.loc[:, ['Medal', 'Nationality', 'Result']]
+    filtered = df_converted[(df_converted['Event'] == event)
+                                          & (df_converted['Medal'] == medal)]
+    filtered = filtered.loc[:, ['Nationality', 'Result']]
     X = filtered.loc[:, filtered.columns != 'Result']
     y = filtered['Result']
     X = pd.get_dummies(X)
 
-    (X_train, X_test, y_train, y_test) = train_test_split(X, y,
-                                                          test_size=0.35)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5,
+                                                        random_state=0)
     model = DecisionTreeRegressor()
-
+    
     model.fit(X_train, y_train)
     y_test_pred = model.predict(X_test)
-    ordered = sorted(y_test_pred.tolist())
-filtered
-    if event in field:
 
-        events.append(event)
-        medals.append('Gold')
-        mark.append(convert_from_seconds(ordered[2]))
+    mark = sorted(y_test_pred)[0]
 
-        events.append(event)
-        medals.append('Silver')
-        mark.append(convert_from_seconds(ordered[1]))
-
-        events.append(event)
-        medals.append('Bronze')
-        mark.append(convert_from_seconds(ordered[0]))
-    else:
-
-        events.append(event)
-        medals.append('Gold')
-        mark.append(convert_from_seconds(ordered[0]))
-
-        events.append(event)
-        medals.append('Silver')
-        mark.append(convert_from_seconds(ordered[1]))
-
-        events.append(event)
-        medals.append('Bronze')
-        mark.append(convert_from_seconds(ordered[2]))
+    return mark
 
 
 def simulate():
@@ -330,17 +306,42 @@ def simulate():
     each result
     """
     event_array = pd.unique(df_converted['Event'])
+    medal_list = ['G', 'S', 'B']
+    events = []
+    medals = []
+    marks = []
+    temp_marks = []
+    fin_results = []
 
     for event in event_array:
-        predict_results(event)
+        temp_marks = []
+        for medal in medal_list:
+            mark = predict_results(event, medal)
 
-    return pd.DataFrame({'Event': events, 'Medal': medals,
-                        'Result': mark})
+            events.append(event)
+            temp_marks.append(mark)
+
+            if (medal == 'G'):
+                medals.append('Gold')
+            elif (medal == 'S'):
+                medals.append('Silver')
+            else:
+                medals.append('Bronze')
 
 
-events = []
-medals = []
-mark = []
+        if event in field:
+            ordered = sorted(temp_marks, reverse=True)
+        else:
+            ordered = sorted(temp_marks)
+
+        marks.extend(ordered)
+        
+    for mark in marks:
+        fin_results.append(convert_from_seconds(mark))
+
+    return pd.DataFrame({'Event': events, 'Medal': medals, 'Result': fin_results})
+
+
 seen = {}
 new_results = df['Result'].apply(convert_to_seconds)
 df_converted = df
@@ -355,6 +356,9 @@ def main():
     simulated_games = simulate()
     print('Simulated Olympic Results')
     print(simulated_games)
+
+    #save to csv
+    simulated_games.to_csv('output.csv')
 
 
 if __name__ == '__main__':
