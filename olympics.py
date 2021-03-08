@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import plotly.express as px
 
@@ -336,10 +337,17 @@ def simulate():
 
         marks.extend(ordered)
         
-    for mark in marks:
-        fin_results.append(convert_from_seconds(mark))
+        sim = pd.DataFrame({'Event': events, 'Medal': medals, 'Result': marks})
 
-    return pd.DataFrame({'Event': events, 'Medal': medals, 'Result': fin_results})
+    # convert all but multi events to h:mm:ss.ms
+    mask = ((sim['Event'] != 'Decathlon Men') &
+                (sim['Event'] != 'Heptathlon Women'))
+  
+    sim_valid = sim[mask]
+    sim['Result'] = np.where(mask, sim['Result'].apply(convert_from_seconds),
+                                                            sim['Result'])
+
+    return sim
 
 
 seen = {}
