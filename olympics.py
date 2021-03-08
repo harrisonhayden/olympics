@@ -343,7 +343,6 @@ def simulate():
     mask = ((sim['Event'] != 'Decathlon Men') &
                 (sim['Event'] != 'Heptathlon Women'))
   
-    sim_valid = sim[mask]
     sim['Result'] = np.where(mask, sim['Result'].apply(convert_from_seconds),
                                                             sim['Result'])
 
