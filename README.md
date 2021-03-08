@@ -6,18 +6,19 @@ Go to **[https://www.kaggle.com/jayrav13/olympic-track-field-results/data](https
 # Setup
 To run the program you're going to need to install the `plotly`, and `scikit-learn` libraries using the package manager of your choice.
 
-* You might run something like this in the command line:
-`pip install plotly`
+* You might run something like this in the command line:  
+`pip install plotly`  
 `pip install scikit-learn`
 
 * Make sure you also have `pandas` installed
 
-* Run the following modules (these are at the top of `olympics.py`):
-`import pandas as pd`
-`from datetime import datetime`
-`import plotly.express as px`
-`from sklearn.model_selection import train_test_split`
-`from sklearn.tree import DecisionTreeRegressor`
+* Run the following modules (these are at the top of `olympics.py`):  
+`import pandas as pd`  
+
+  `from datetime import datetime`  
+`import plotly.express as px`  
+`from sklearn.model_selection import train_test_split`  
+`from sklearn.tree import DecisionTreeRegressor`  
 `from clean_file import clean`
 
 * Make sure all the files are in the same directory
