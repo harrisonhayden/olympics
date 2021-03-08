@@ -13,9 +13,9 @@ To run the program you're going to need to install the `plotly`, and `scikit-lea
 * Make sure you also have `pandas` installed
 
 * Run the following modules (these are at the top of `olympics.py`):  
-`import pandas as pd`
+`import pandas as pd`  
 
-`from datetime import datetime`  
+  `from datetime import datetime`  
 `import plotly.express as px`  
 `from sklearn.model_selection import train_test_split`  
 `from sklearn.tree import DecisionTreeRegressor`  
