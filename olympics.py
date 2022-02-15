@@ -282,8 +282,9 @@ def gold_medal_map(continent="world"):
 
 def predict_results(event, medal):
     """
-    Takes an event and medal type as a string parameter and uses a decision tree regressor
-    to predict the top 3 results given medal and nationality of a competitor
+    Takes an event and medal type as a string parameter and uses a decision tree
+    regressor to predict the top 3 results given medal and nationality of a
+    competitor
     """
     filtered = df_converted[(df_converted['Event'] == event) & (df_converted['Medal'] == medal)]
     filtered = filtered.loc[:, ['Nationality', 'Result']]
@@ -308,6 +309,7 @@ def simulate():
     Returns a dataframe containing the event name, medal type, and mark of
     each result
     """
+    print('Predicting Results...')
     event_array = pd.unique(df_converted['Event'])
     medal_list = ['G', 'S', 'B']
     events = []
@@ -341,11 +343,9 @@ def simulate():
         sim = pd.DataFrame({'Event': events, 'Medal': medals, 'Result': marks})
 
     # convert all but multi events to h:mm:ss.ms
-    mask = ((sim['Event'] != 'Decathlon Men') &
-                (sim['Event'] != 'Heptathlon Women'))
+    mask = ((sim['Event'] != 'Decathlon Men') & (sim['Event'] != 'Heptathlon Women'))
 
-    sim['Result'] = np.where(mask, sim['Result'].apply(convert_from_seconds),
-                                                            sim['Result'])
+    sim['Result'] = np.where(mask, sim['Result'].apply(convert_from_seconds), sim['Result'])
 
     return sim
 
