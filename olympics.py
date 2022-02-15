@@ -10,8 +10,9 @@ from clean_file import clean
 
 data = pd.read_csv('results_fixed.csv')
 df = clean(data)
+seen = {}
 
-field = [
+FIELD = [
     'Decathlon Men',
     'Heptathlon Women',
     'Discus Throw Men',
@@ -32,6 +33,15 @@ field = [
     'Triple Jump Women',
     ]
 
+def main():
+    performances_over_time().show()
+    gold_medal_map().show()
+    simulated_games = simulate()
+    print('Simulated Olympic Results')
+    print(simulated_games)
+
+    # save to csv
+    simulated_games.to_csv('output.csv')
 
 def convert_to_seconds(mark):
     """
@@ -48,10 +58,8 @@ def convert_to_seconds(mark):
             t = datetime.strptime(mark, '%H:%M:%S.%f')
         else:
             t = datetime.strptime(mark, '%H:%M:%S')
-        return (t.hour * 60 + t.minute) * 60 + t.second + t.microsecond \
-            / 1000000
+        return (t.hour * 60 + t.minute) * 60 + t.second + t.microsecond / 1000000
     else:
-
         return float(mark)
 
 
@@ -65,11 +73,9 @@ def convert_from_seconds(mark):
 
     time = str(datetime.timedelta(seconds=mark))
 
-    if time[0] == '0' and time[2] == '0' and time[3] == '0' and time[5] \
-            == '0':
+    if time[0] == '0' and time[2] == '0' and time[3] == '0' and time[5] == '0':
         return time[6:].strip('0')
-    if time[0] == '0' and time[2] == '0' and time[3] == '0' and time[5] \
-            != '0':
+    if time[0] == '0' and time[2] == '0' and time[3] == '0' and time[5] != '0':
         return time[5:].strip('0')
     elif time[0] == '0' and time[2] == '0' and time[3] != '0':
         return time[3:].strip('0')
@@ -78,8 +84,7 @@ def convert_from_seconds(mark):
     else:
         return time.strip('0')
 
-
-def get_scores(result):
+def get_scores(result, df):
     """
     Takes in a single result, calculates its IAAF score based on its event,
     and returns it as a float
@@ -87,22 +92,18 @@ def get_scores(result):
     """
 
     if result not in seen:
-        constants = df_converted.loc[df_converted['Result'] == result,
-                                     'Constants'].iloc[0]
+        constants = df.loc[df['Result'] == result, 'Constants'].iloc[0]
         seen[result] = 1
     else:
         i = seen[result]
-        constants = df_converted.loc[df_converted['Result'] == result,
-                                     'Constants'].iloc[i]
+        constants = df.loc[df['Result'] == result, 'Constants'].iloc[i]
         seen[result] += 1
 
     result_shift = constants[0]
     conversion_factor = constants[1]
     point_shift = constants[2]
 
-    return round(conversion_factor * (result + result_shift) ** 2
-                 + point_shift)
-
+    return round(conversion_factor * (result + result_shift) ** 2 + point_shift)
 
 def get_constants(event):
     """
@@ -114,7 +115,6 @@ def get_constants(event):
     # returns list [result shift, conversion factor, point shift]
 
     # Men's running events
-
     if event == '100M Men':
         return [-17, 24.63, 0]
     if event == '200M Men':
@@ -147,7 +147,6 @@ def get_constants(event):
         return [-334, 0.05026, 0]
 
     # Men's field events
-
     if event == 'High Jump Men':
         return [11.534, 32.29, -5000]
     if event == 'Pole Vault Men':
@@ -166,12 +165,10 @@ def get_constants(event):
         return [2886.8, 0.0023974, -20000]
 
     # Combined
-
     if event == 'Decathlon Men':
         return [71170, 0.00000097749, -5000]
 
     # Women's running events
-
     if event == '100M Women':
         return [-22, 9.92, 0]
     if event == '200M Women':
@@ -202,7 +199,6 @@ def get_constants(event):
         return [-480, 0.01562, 0]
 
     # Women's field events
-
     if event == 'High Jump Women':
         return [10.574, 39.34, -5000]
     if event == 'Pole Vault Women':
@@ -221,19 +217,26 @@ def get_constants(event):
         return [2214.9, 0.004073, -20000]
 
     # Combined
-
     if event == 'Heptathlon Women':
         return [55990, 0.000001581, -5000]
 
+def make_complete_df(df):
+    df['Result'] = df['Result'].apply(convert_to_seconds)
+    df['Constants'] = df['Event'].apply(get_constants)
+    df['IAAF Score'] = df['Result'].apply(get_scores, df=df)
+
+    return df
+
+df_converted = make_complete_df(df)
 
 def performances_over_time():
     """
     Graphs the average IAAF score for each year on a time axis
     Returns the graph as a plotly line graph
     """
+    print('Generating Performances Plot...')
     avg_scores = df_converted.groupby('Year')['IAAF Score'].mean()
-    avg_scores = pd.DataFrame({'Year': avg_scores.index,
-                              'IAAF Score': avg_scores.values})
+    avg_scores = pd.DataFrame({'Year': avg_scores.index, 'IAAF Score': avg_scores.values})
 
     plot = px.line(avg_scores, x='Year', y='IAAF Score')
     plot.update_layout(title=('Overall Performance Over Time'))
@@ -253,6 +256,7 @@ def gold_medal_map(continent="world"):
     return a map of the world with all countries with all of the previously
     mentioned features.
     """
+    print('Generating Gold Medal Map...')
     continent_lower = continent.lower()
     if continent_lower == "world":
         cap_continent = 'the ' + continent_lower.capitalize()
@@ -281,17 +285,15 @@ def predict_results(event, medal):
     Takes an event and medal type as a string parameter and uses a decision tree regressor
     to predict the top 3 results given medal and nationality of a competitor
     """
-    filtered = df_converted[(df_converted['Event'] == event)
-                                          & (df_converted['Medal'] == medal)]
+    filtered = df_converted[(df_converted['Event'] == event) & (df_converted['Medal'] == medal)]
     filtered = filtered.loc[:, ['Nationality', 'Result']]
     X = filtered.loc[:, filtered.columns != 'Result']
     y = filtered['Result']
     X = pd.get_dummies(X)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5,
-                                                        random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=0)
     model = DecisionTreeRegressor()
-    
+
     model.fit(X_train, y_train)
     y_test_pred = model.predict(X_test)
 
@@ -312,7 +314,6 @@ def simulate():
     medals = []
     marks = []
     temp_marks = []
-    fin_results = []
 
     for event in event_array:
         temp_marks = []
@@ -330,43 +331,23 @@ def simulate():
                 medals.append('Bronze')
 
 
-        if event in field:
+        if event in FIELD:
             ordered = sorted(temp_marks, reverse=True)
         else:
             ordered = sorted(temp_marks)
 
         marks.extend(ordered)
-        
+
         sim = pd.DataFrame({'Event': events, 'Medal': medals, 'Result': marks})
 
     # convert all but multi events to h:mm:ss.ms
     mask = ((sim['Event'] != 'Decathlon Men') &
                 (sim['Event'] != 'Heptathlon Women'))
-  
+
     sim['Result'] = np.where(mask, sim['Result'].apply(convert_from_seconds),
                                                             sim['Result'])
 
     return sim
-
-
-seen = {}
-new_results = df['Result'].apply(convert_to_seconds)
-df_converted = df
-df_converted['Result'] = new_results
-df_converted['Constants'] = df['Event'].apply(get_constants)
-df_converted['IAAF Score'] = df_converted['Result'].apply(get_scores)
-
-
-def main():
-    performances_over_time().show()
-    gold_medal_map().show()
-    simulated_games = simulate()
-    print('Simulated Olympic Results')
-    print(simulated_games)
-
-    #save to csv
-    simulated_games.to_csv('output.csv')
-
 
 if __name__ == '__main__':
     main()
